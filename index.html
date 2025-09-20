@@ -1,0 +1,523 @@
+<!-- 
+معلومات الدخول للأدمن:
+1. رقم الإقامة: admin أو 6500
+2. كلمة المرور: 1234
+
+ملاحظة: هذه المعلومات مضبوطة تلقائياً عند تشغيل النظام لأول مرة
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="نظام إدارة الحضور والغياب - مدرسة عماد الدين زنكي">
+<title>نظام مدرسة عماد الدين زنكي</title>
+<style>
+body { font-family:"Tahoma",sans-serif; background:#e6f2ff; margin:0; padding:0; }
+header { background:#1f3f68; color:#fff; padding:20px; font-size:26px; text-align:center; }
+.container { margin:30px auto; padding:25px; max-width:750px; background:#fff; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.2);} 
+input, select, button { width:95%; padding:12px; margin:8px 0; border-radius:8px; border:1px solid #ccc; font-size:16px; transition:0.3s; }
+input:focus, select:focus { border-color:#3498db; box-shadow:0 0 8px rgba(52,152,219,0.5); outline:none; }
+button { background:#3498db; color:#fffbfb; cursor:pointer; border:none; font-weight:bold; }
+button:hover { background:#2980b9; transform:scale(1.05); box-shadow:0 0 10px rgba(0,0,0,0.3); }
+button:active { transform:scale(0.98); }
+label { font-size:14px; }
+.hidden { display:none; }
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+table, th, td { border:1px solid #ccc; }
+th, td { padding:8px; text-align:center; }
+.tip { font-size:12px; color:#555; margin-top:-6px; }
+
+@media (max-width: 768px) {
+  .container { margin:10px; padding:15px; }
+  input, select, button { width:100%; }
+  table { font-size:14px; }
+}
+</style>
+</head>
+<body>
+<header>مدرسة عماد الدين زنكي</header>
+
+<!-- تسجيل الدخول -->
+<div id="loginPage" class="container">
+  <h2 style="text-align:center; color:#1e3a5f;">تسجيل الدخول</h2>
+  <input type="text" id="loginId" placeholder="رقم الإقامة">
+  <input type="password" id="loginPassword" placeholder="كلمة المرور">
+  <label><input type="checkbox" id="rememberMe"> تذكرني</label>
+  <button id="loginBtn">دخول</button>
+</div>
+
+<!-- اختيار لوحة التحكم (للأدمن فقط) -->
+<div id="adminChoice" class="container hidden">
+  <h2 style="text-align:center; color:#1e3a5f;">اختر لوحة التحكم</h2>
+  <button id="toAdmin">لوحة الأدمن</button>
+  <button id="toTeacher">لوحة المدرس</button>
+  <button id="toStudent">لوحة الطالب</button>
+  <button style="background:#e74c3c;" onclick="logout()">تسجيل خروج</button>
+</div>
+
+<!-- لوحة الأدمن -->
+<div id="adminPage" class="container hidden">
+  <h2>لوحة الأدمن</h2>
+  <button onclick="showSection('addTeacher')">➕ إضافة مدرس</button>
+  <button onclick="showSection('addStudent')">➕ إضافة طالب</button>
+  <button onclick="showSection('importExcel')">📂 استيراد طلاب من إكسل</button>
+  <button onclick="showSection('report')">📊 التقرير</button>
+  <button onclick="showSection('manage')">⚙️ إدارة المستخدمين</button>
+  <button onclick="deleteAllStudents()" style="background:#e74c3c">🗑️ حذف جميع الطلاب</button>
+  <button style="background:#e74c3c;" onclick="logout()">تسجيل خروج</button>
+
+  <!-- إضافة مدرس -->
+  <div id="addTeacher" class="hidden">
+    <h3>إضافة مدرس</h3>
+    <input type="text" id="teacherName" placeholder="اسم المدرس">
+    <input type="text" id="teacherId" placeholder="رقم الإقامة">
+    <input type="password" id="teacherPassword" placeholder="كلمة المرور">
+    <label><input type="checkbox" id="isAdmin"> أدمن؟</label>
+    <button onclick="addTeacher()">حفظ</button>
+  </div>
+
+  <!-- إضافة طالب -->
+  <div id="addStudent" class="hidden">
+    <h3>إضافة طالب</h3>
+    <input type="text" id="studentName" placeholder="اسم الطالب">
+    <input type="text" id="studentId" placeholder="رقم الإقامة">
+    <input type="password" id="studentPassword" placeholder="كلمة المرور">
+    <select id="grade">
+      <option>أول متوسط</option><option>ثاني متوسط</option><option>ثالث متوسط</option>
+    </select>
+    <select id="class">
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+      <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+    </select>
+    <button onclick="addStudent()">حفظ</button>
+  </div>
+
+  <!-- استيراد طلاب من إكسل -->
+  <div id="importExcel" class="hidden">
+    <h3>📂 استيراد طلاب من ملف إكسل</h3>
+    <div class="tip">A = الفصل، C = الاسم، D = الهوية</div>
+    <label>اختر المرحلة</label>
+    <select id="importGrade">
+      <option value="">— اختر —</option>
+      <option>أول متوسط</option><option>ثاني متوسط</option><option>ثالث متوسط</option>
+    </select>
+    <input type="file" id="excelFile" accept=".xls,.xlsx">
+    <button onclick="importExcel()">رفع وإضافة</button>
+  </div>
+
+  <!-- التقرير -->
+  <div id="report" class="hidden">
+    <h3>التقرير</h3>
+    <input type="text" id="filterStudent" placeholder="اسم الطالب أو رقم الإقامة">
+    <label>من تاريخ:</label>
+    <input type="date" id="filterFromDate">
+    <label>إلى تاريخ:</label>
+    <input type="date" id="filterToDate">
+    <select id="filterGrade"><option value="">اختر المرحلة</option><option>أول متوسط</option><option>ثاني متوسط</option><option>ثالث متوسط</option></select>
+    <select id="filterClass"><option value="">اختر الفصل</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+    <select id="filterSession"><option value="">اختر الحصة</option><option>الأولى</option><option>الثانية</option><option>الثالثة</option><option>الرابعة</option><option>الخامسة</option><option>السادسة</option><option>السابعة</option></select>
+    <button onclick="showReport()">عرض</button>
+    <button onclick="downloadCSV()">تحميل CSV</button>
+    <div id="reportTable"></div>
+    <div id="reportStats" style="font-weight:bold; margin-top:10px;"></div>
+  </div>
+
+  <!-- إدارة المستخدمين -->
+  <div id="manage" class="hidden">
+    <h3>إدارة الطلاب والمدرسين</h3>
+    <input type="text" id="searchId" placeholder="ابحث برقم الإقامة">
+    <button onclick="searchUser()">بحث</button>
+    <div id="searchResult"></div>
+  </div>
+</div>
+
+<!-- لوحة المدرس -->
+<div id="teacherPage" class="container hidden">
+  <h2>لوحة المدرس</h2>
+  <label>اختر المرحلة</label>
+  <select id="teacherGrade">
+    <option value="">اختر المرحلة</option>
+    <option>أول متوسط</option><option>ثاني متوسط</option><option>ثالث متوسط</option>
+  </select>
+  <label>اختر الفصل</label>
+  <select id="teacherClass">
+    <option value="">اختر الفصل</option>
+    <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+    <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+  </select>
+  <label>اختر الحصة</label>
+  <select id="sessionSelect">
+    <option>الأولى</option><option>الثانية</option><option>الثالثة</option>
+    <option>الرابعة</option><option>الخامسة</option><option>السادسة</option><option>السابعة</option>
+  </select>
+  <button onclick="loadStudents()">عرض الطلاب</button>
+  <div id="studentList">اختر المرحلة والفصل ثم اضغط عرض الطلاب.</div>
+  <button style="background:#e74c3c;" onclick="logout()">تسجيل خروج</button>
+</div>
+
+<!-- لوحة الطالب -->
+<div id="studentPage" class="container hidden">
+  <h2>لوحة الطالب</h2>
+  <label>اختر يوم</label>
+  <input type="date" id="studentDay">
+  <button onclick="showStudentDay()">عرض</button>
+  <hr>
+  <label>من تاريخ</label>
+  <input type="date" id="fromDate">
+  <label>إلى تاريخ</label>
+  <button onclick="showStudentRange()">عرض الفترة</button>
+  <div id="studentReport"></div>
+  <button style="background:#e74c3c;" onclick="logout()">تسجيل خروج</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ================== بيانات ==================
+let users = JSON.parse(localStorage.getItem("users")) || [];
+let students = JSON.parse(localStorage.getItem("students")) || [];
+let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
+
+// الأدمن الافتراضي
+(function ensureAdmins(){
+  if(!users.find(u=>u.id==="admin" && u.isAdmin))
+    users.push({id:"admin", name:"المدير", password:"1234", isAdmin:true});
+  if(!users.find(u=>u.id==="6500" && u.isAdmin))
+    users.push({id:"6500", name:"المدير", password:"1234", isAdmin:true});
+  localStorage.setItem("users", JSON.stringify(users));
+})();
+
+let currentUser = JSON.parse(localStorage.getItem("currentUser"));
+window.onload = function(){
+  if(currentUser){
+    if(currentUser.isAdmin) showPage("adminChoice");
+    else if(currentUser.isTeacher) showTeacherPage();
+    else if(currentUser.isStudent) showStudentPage();
+  }
+}
+
+document.getElementById('loginBtn').addEventListener('click', login);
+['loginId','loginPassword'].forEach(id=>{
+  document.getElementById(id).addEventListener('keyup', e=>{ if(e.key==='Enter') login(); });
+});
+
+document.getElementById('toAdmin').addEventListener('click',()=>showPage('adminPage'));
+document.getElementById('toTeacher').addEventListener('click',showTeacherPage);
+document.getElementById('toStudent').addEventListener('click',showStudentPage);
+
+['teacherGrade','teacherClass'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', loadStudents);
+});
+
+// ============= تسجيل الدخول =============
+function login(){
+  const id=document.getElementById("loginId").value.trim();
+  const pass=document.getElementById("loginPassword").value.trim();
+  const remember=document.getElementById("rememberMe").checked;
+  const user=users.find(u=>u.id===id && u.password===pass);
+  if(!user){ alert("البيانات خاطئة"); return; }
+  currentUser=user;
+  if(remember) localStorage.setItem("currentUser", JSON.stringify(user));
+  else localStorage.removeItem("currentUser");
+  if(user.isAdmin) showPage("adminChoice");
+  else if(user.isTeacher) showTeacherPage();
+  else if(user.isStudent) showStudentPage();
+}
+
+function logout(){ currentUser=null; localStorage.removeItem("currentUser"); showPage("loginPage"); }
+function showPage(pageId){
+  ["loginPage","adminPage","teacherPage","adminChoice","studentPage"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+  document.getElementById(pageId).classList.remove("hidden");
+}
+function showTeacherPage(){ showPage('teacherPage'); }
+function showStudentPage(){ showPage('studentPage'); }
+
+function showSection(sectionId){
+  ["addTeacher","addStudent","report","manage","importExcel"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+  document.getElementById(sectionId).classList.remove("hidden");
+}
+
+// ============= إضافة مدرس =============
+function addTeacher(){
+  const name=document.getElementById("teacherName").value.trim();
+  const id=document.getElementById("teacherId").value.trim();
+  const pass=document.getElementById("teacherPassword").value.trim();
+  const isAdmin=document.getElementById("isAdmin").checked;
+  if(!name||!id||!pass){alert("املأ جميع الحقول");return;}
+  if(users.find(u=>u.id===id)){alert("المعلم موجود"); return;}
+  users.push({id,name,password:pass,isAdmin,isTeacher:true});
+  localStorage.setItem("users",JSON.stringify(users));
+  alert("تمت إضافة المدرس");
+}
+
+// ============= إضافة طالب =============
+function addStudent(){
+  const name=document.getElementById("studentName").value.trim();
+  const id=document.getElementById("studentId").value.trim();
+  const pass=document.getElementById("studentPassword").value.trim();
+  const grade=document.getElementById("grade").value;
+  const cls=document.getElementById("class").value;
+  if(!name||!id||!pass){alert("املأ جميع الحقول");return;}
+  if(students.find(s=>s.id===id)){alert("الطالب موجود");return;}
+  students.push({id,name,grade,class:cls});
+  users.push({id,name,password:pass,isStudent:true});
+  localStorage.setItem("students",JSON.stringify(students));
+  localStorage.setItem("users",JSON.stringify(users));
+  alert("تمت إضافة الطالب");
+}
+
+// ============= استيراد من اكسل =============
+function importExcel(){
+  const file=document.getElementById("excelFile").files[0];
+  const chosenGrade=document.getElementById("importGrade").value;
+  if(!file){alert("اختر ملف إكسل"); return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const data=new Uint8Array(e.target.result);
+    const workbook=XLSX.read(data,{type:'array'});
+    const sheet=workbook.Sheets[workbook.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+    let added=0;
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      const cls=r[0];
+      const name=r[2];
+      const id=r[3];
+      if(!name||!id) continue;
+      let grade=chosenGrade||"";
+      if(!students.find(s=>s.id==id)){
+        students.push({id,name,grade,class:cls});
+        users.push({id,name,password:"1234",isStudent:true});
+        added++;
+      }
+    }
+    localStorage.setItem("students",JSON.stringify(students));
+    localStorage.setItem("users",JSON.stringify(users));
+    alert("تم استيراد "+added+" طالب");
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ============= تحميل الطلاب للمدرس =============
+function loadStudents(){
+  const grade=document.getElementById("teacherGrade").value;
+  const cls=document.getElementById("teacherClass").value;
+  let list=document.getElementById("studentList");
+  list.innerHTML="";
+  let filtered=students.filter(s=>(!grade||s.grade===grade)&&(!cls||s.class===cls));
+  if(filtered.length===0){list.innerHTML="لا يوجد طلاب."; return;}
+  filtered.forEach(s=>{
+    let div=document.createElement("div");
+    div.innerHTML=`${s.name} (${s.id}) - ${s.grade} فصل ${s.class} 
+    <button onclick="markAttendance('${s.id}','حاضر')">✅</button> 
+    <button onclick="markAttendance('${s.id}','متأخر')">⏰</button> 
+    <button onclick="markAttendance('${s.id}','غائب')">❌</button>`;
+    list.appendChild(div);
+  });
+}
+
+// ============= تسجيل الحضور =============
+function markAttendance(studentId,status){
+  const session=document.getElementById("sessionSelect").value;
+  const now=new Date().toISOString().split('T')[0];
+  attendance.push({studentId,status,session,teacher:currentUser.name,date:now});
+  localStorage.setItem("attendance",JSON.stringify(attendance));
+  alert("تم الحفظ");
+}
+
+// ============= واجهة الطالب =============
+function showStudentDay(){
+  const day=document.getElementById("studentDay").value;
+  const data=attendance.filter(a=>a.studentId===currentUser.id && a.date===day);
+  displayStudentReport(data);
+}
+function showStudentRange(){
+  const from=document.getElementById("fromDate").value;
+  const to=document.getElementById("toDate").value;
+  const data=attendance.filter(a=>a.studentId===currentUser.id && (!from||a.date>=from)&&(!to||a.date<=to));
+  displayStudentReport(data);
+}
+function displayStudentReport(data){
+  let div=document.getElementById("studentReport");
+  if(data.length===0){div.innerHTML="لا توجد سجلات"; return;}
+  let table="<table><tr><th>الحالة</th><th>الحصة</th><th>المدرس</th><th>التاريخ</th></tr>";
+  data.forEach(a=>{ table+=`<tr><td>${a.status}</td><td>${a.session}</td><td>${a.teacher}</td><td>${a.date}</td></tr>`; });
+  table+="</table>";
+  div.innerHTML=table;
+}
+
+// ============= التقرير =============
+function showReport(){
+  const grade = document.getElementById("filterGrade").value;
+  const cls = document.getElementById("filterClass").value;
+  const session = document.getElementById("filterSession").value;
+  const studentSearch = document.getElementById("filterStudent").value.trim().toLowerCase();
+  const fromDate = document.getElementById("filterFromDate").value;
+  const toDate = document.getElementById("filterToDate").value;
+  
+  let data = attendance;
+  
+  // فلترة حسب التاريخ
+  if(fromDate || toDate) {
+    data = data.filter(a => 
+      (!fromDate || a.date >= fromDate) && 
+      (!toDate || a.date <= toDate)
+    );
+  }
+
+  // فلترة حسب المرحلة والفصل والطالب
+  if(grade || cls || studentSearch) {
+    const filtered = students.filter(s => 
+      (!grade || s.grade === grade) && 
+      (!cls || s.class === cls) &&
+      (!studentSearch || 
+        s.name.toLowerCase().includes(studentSearch) || 
+        s.id.toLowerCase().includes(studentSearch))
+    ).map(s => s.id);
+    data = data.filter(a => filtered.includes(a.studentId));
+  }
+  
+  if(session) data = data.filter(a => a.session === session);
+
+  let table = "<table><tr><th>الاسم</th><th>الهوية</th><th>المرحلة</th><th>الفصل</th><th>الحالة</th><th>الحصة</th><th>المدرس</th><th>التاريخ</th></tr>";
+  data.forEach(a => {
+    const student = students.find(s => s.id === a.studentId);
+    if(student) {
+      table += `<tr>
+        <td>${student.name}</td>
+        <td>${student.id}</td>
+        <td>${student.grade}</td>
+        <td>${student.class}</td>
+        <td>${a.status}</td>
+        <td>${a.session}</td>
+        <td>${a.teacher}</td>
+        <td>${a.date}</td>
+      </tr>`;
+    }
+  });
+  table += "</table>";
+  
+  document.getElementById("reportTable").innerHTML = data.length ? table : "لا توجد سجلات";
+  
+  // إحصائيات
+  const stats = {حاضر: 0, متأخر: 0, غائب: 0};
+  data.forEach(a => stats[a.status]++);
+  document.getElementById("reportStats").innerHTML = 
+    `الإجمالي: حضور (${stats.حاضر})، تأخر (${stats.متأخر})، غياب (${stats.غائب})`;
+}
+
+function downloadCSV() {
+  const grade = document.getElementById("filterGrade").value;
+  const cls = document.getElementById("filterClass").value;
+  const session = document.getElementById("filterSession").value;
+  const fromDate = document.getElementById("filterFromDate").value;
+  const toDate = document.getElementById("filterToDate").value;
+  
+  let data = attendance;
+  if(fromDate || toDate) {
+    data = data.filter(a => 
+      (!fromDate || a.date >= fromDate) && 
+      (!toDate || a.date <= toDate)
+    );
+  }
+  if(grade || cls) {
+    const filtered = students.filter(s => 
+      (!grade || s.grade === grade) && 
+      (!cls || s.class === cls)
+    ).map(s => s.id);
+    data = data.filter(a => filtered.includes(a.studentId));
+  }
+  if(session) data = data.filter(a => a.session === session);
+
+  let csv = "الاسم,الهوية,المرحلة,الفصل,الحالة,الحصة,المدرس,التاريخ\n";
+  data.forEach(a => {
+    const student = students.find(s => s.id === a.studentId);
+    if(student) {
+      csv += `${student.name},${student.id},${student.grade},${student.class},${a.status},${a.session},${a.teacher},${a.date}\n`;
+    }
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "تقرير.csv";
+  link.click();
+}
+
+function searchUser() {
+  const id = document.getElementById("searchId").value.trim();
+  const result = document.getElementById("searchResult");
+  
+  const user = users.find(u => u.id === id);
+  if(!user) {
+    result.innerHTML = "لم يتم العثور على المستخدم";
+    return;
+  }
+
+  const student = students.find(s => s.id === id);
+  let html = `<div>
+    الاسم: ${user.name}<br>
+    الهوية: ${user.id}<br>
+    النوع: ${user.isAdmin ? 'أدمن' : user.isTeacher ? 'مدرس' : 'طالب'}<br>`;
+  
+  if(student) {
+    html += `المرحلة: ${student.grade}<br>
+    الفصل: ${student.class}<br>`;
+  }
+  
+  html += `<input type="password" id="newPass_${id}" placeholder="كلمة المرور الجديدة">
+    <button onclick="changePassword('${id}')">تغيير كلمة المرور</button>
+    <button onclick="deleteUser('${id}')" style="background:#e74c3c">حذف</button>
+    </div>`;
+    
+  result.innerHTML = html;
+}
+
+function changePassword(id) {
+  const newPass = document.getElementById(`newPass_${id}`).value.trim();
+  if(!newPass) {
+    alert("أدخل كلمة المرور الجديدة");
+    return;
+  }
+  const user = users.find(u => u.id === id);
+  if(user) {
+    user.password = newPass;
+    localStorage.setItem("users", JSON.stringify(users));
+    alert("تم تغيير كلمة المرور");
+  }
+}
+
+function deleteUser(id) {
+  if(!confirm("متأكد من الحذف؟")) return;
+  
+  users = users.filter(u => u.id !== id);
+  students = students.filter(s => s.id !== id);
+  attendance = attendance.filter(a => a.studentId !== id);
+  
+  localStorage.setItem("users", JSON.stringify(users));
+  localStorage.setItem("students", JSON.stringify(students));
+  localStorage.setItem("attendance", JSON.stringify(attendance));
+  
+  searchUser();
+}
+
+function deleteAllStudents() {
+  if(!confirm("هل أنت متأكد من حذف جميع الطلاب؟\nلا يمكن التراجع عن هذه العملية!")) return;
+  if(!confirm("تأكيد مرة أخرى: سيتم حذف جميع الطلاب وبياناتهم وسجلات حضورهم")) return;
+  
+  // حذف جميع الطلاب وبياناتهم
+  const studentIds = students.map(s => s.id);
+  users = users.filter(u => !u.isStudent);
+  students = [];
+  attendance = attendance.filter(a => !studentIds.includes(a.studentId));
+  
+  // حفظ التغييرات
+  localStorage.setItem("users", JSON.stringify(users));
+  localStorage.setItem("students", JSON.stringify(students));
+  localStorage.setItem("attendance", JSON.stringify(attendance));
+  
+  alert("تم حذف جميع الطلاب وبياناتهم");
+}
+</script>
+</body>
+</html>
